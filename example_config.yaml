@@ -1,0 +1,11 @@
+connectors:
+  shell:
+
+logging:
+  console: false
+
+skills:
+  hello:
+  f1:
+    path: /home/stuart/Git/skill-formula1-schedule/
+    calendar_url: "https://ics.ecal.com/ecal-sub/6415faefadbc17000da55b31/Formula%201.ics"
