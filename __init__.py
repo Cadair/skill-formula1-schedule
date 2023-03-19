@@ -26,9 +26,9 @@ def regex_command(command, description="", friendly_command=None, **kwargs):
 
 @regex_command("help", "print this help message")
 async def help(opsdroid, config, message):
-    commands = "\n".join([f"{F1BOT_COMMAND_PREFIX}{command} - {description}" for command, description in F1BOT_COMMANDS.items()])
+    commands = "<br/>\n".join([f"{F1BOT_COMMAND_PREFIX}{command} - {description}" for command, description in F1BOT_COMMANDS.items()])
     help_text = dedent("""\
-    Hambot understands the following commands:
+    F1Bot understands the following commands:<br/>
 
     {commands}
     """).format(commands=commands)
