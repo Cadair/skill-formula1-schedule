@@ -41,7 +41,7 @@ class Formula1Events(Skill):
     """
     def __init__(self, opsdroid, config, *args, **kwargs):
         self.cache = TTLCache(maxsize=5, ttl=60*60)  # Only retrieve the data every hour
-        self.tz = datetime.UTC
+        self.tz = pytz.UTC
         super().__init__(opsdroid, config)
 
     @property
@@ -60,7 +60,7 @@ class Formula1Events(Skill):
         events = list(filter(lambda e: session in e.name.lower(), self.get_all_events()))
         return events[0]
 
-    def next_event_info(self, session=None, display_tz=datetime.UTC):
+    def next_event_info(self, session=None, display_tz=pytz.UTC):
         session = session or "race"
         event = self.get_next_event(session=session)
         start = event.begin.astimezone(display_tz).strftime("%Y-%m-%d %H:%M:%S %Z")
@@ -76,6 +76,6 @@ class Formula1Events(Skill):
                    friendly_command="next [race|quali|practice] [timezone]")
     async def next_event_command(self, message):
         tz = message.entities['tz']['value']
-        tz = pytz.timezone(tz) if tz else datetime.UTC
+        tz = pytz.timezone(tz) if tz else pytz.UTC
         session = message.entities['session']['value']
         await message.respond(self.next_event_info(session=session, display_tz=tz))
