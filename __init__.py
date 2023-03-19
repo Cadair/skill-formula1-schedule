@@ -64,7 +64,7 @@ class Formula1Events(Skill):
         session = session or "race"
         event = self.get_next_event(session=session)
         start = event.begin.astimezone(display_tz).strftime("%Y-%m-%d %H:%M:%S %Z")
-        return f"{event.name} {start}"
+        return f"{event.name} - {start}"
 
     def get_upcoming_events(timedelta=datetime.timedelta(minutes=10)):
         now = datetime.datetime.now(self.tz)
@@ -76,6 +76,23 @@ class Formula1Events(Skill):
                    friendly_command="next [race|quali|practice] [timezone]")
     async def next_event_command(self, message):
         tz = message.entities['tz']['value']
-        tz = pytz.timezone(tz) if tz else pytz.UTC
+        if not tz:
+            tz = await self.opsdroid.memory.get(message.user, None)
+        try:
+            tz = pytz.timezone(tz) if tz else pytz.UTC
+        except pytz.UnknownTimeZoneError:
+            return await message.respond(f"Unable to parse timezone {tz}")
         session = message.entities['session']['value']
         await message.respond(self.next_event_info(session=session, display_tz=tz))
+
+    @regex_command("settz\s?(?P<tz>.*)",
+                   "Store a default timezone for your user.",
+                   friendly_command="settz <timezone>")
+    async def store_tz_command(self, message):
+        try:
+            tz = message.entities['tz']['value']
+            tz = pytz.timezone(tz) if tz else pytz.UTC
+        except pytz.UnknownTimeZoneError:
+            return await message.respond(f"Unable to parse timezone {tz}")
+        await self.opsdroid.memory.put(message.user_id, tz.zone)
+        await message.respond(f"Set timezone for user {message.user} to {tz.zone}")
