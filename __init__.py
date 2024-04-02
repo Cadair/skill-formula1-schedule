@@ -63,8 +63,13 @@ class Formula1Events(Skill):
     def next_event_info(self, session=None, display_tz=pytz.UTC):
         session = session or "race"
         event = self.get_next_event(session=session)
-        start = event.begin.astimezone(display_tz).strftime("%Y-%m-%d %H:%M:%S %Z")
-        return f"{event.name} - {start}"
+        time_fmt = "%Y-%m-%d %H:%M:%S %Z"
+        start = event.begin.astimezone(display_tz).strftime(time_fmt)
+        response = f"{event.name} - {start}"
+        if display_tz != pytz.UTC:
+            start_utc = event.begin.astimezone(pytz.UTC).strftime(time_fmt)
+            response += " ({start_utc})"
+        return response
 
     def get_upcoming_events(timedelta=datetime.timedelta(minutes=10)):
         now = datetime.datetime.now(self.tz)
@@ -77,7 +82,7 @@ class Formula1Events(Skill):
     async def next_event_command(self, message):
         tz = message.entities['tz']['value']
         if not tz:
-            tz = await self.opsdroid.memory.get(message.user, None)
+            tz = await self.opsdroid.memory.get(message.user_id, None)
         try:
             tz = pytz.timezone(tz) if tz else pytz.UTC
         except pytz.UnknownTimeZoneError:
