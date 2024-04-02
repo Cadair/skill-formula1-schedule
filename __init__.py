@@ -68,7 +68,7 @@ class Formula1Events(Skill):
         response = f"{event.name} - {start}"
         if display_tz != pytz.UTC:
             start_utc = event.begin.astimezone(pytz.UTC).strftime(time_fmt)
-            response += " ({start_utc})"
+            response += f" ({start_utc})"
         return response
 
     def get_upcoming_events(timedelta=datetime.timedelta(minutes=10)):
