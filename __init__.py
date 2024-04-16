@@ -71,6 +71,9 @@ class Formula1Events(Skill):
 
     def next_event_info(self, session=None, display_tz=pytz.UTC):
         event = self.get_next_event(session=session)
+        return self.format_event(event, display_tz)
+
+    def format_event(self, event, display_tz=pytz.UTC):
         time_fmt = "%Y-%m-%d %H:%M:%S %Z"
         start = event.begin.astimezone(display_tz).strftime(time_fmt)
         response = f"{event.name} - {start}"
@@ -84,9 +87,9 @@ class Formula1Events(Skill):
         return list(f1.cal.timeline.included(now,
                                              now+datetime.timedelta(minutes=timedelta)))
 
-    @regex_command("next\s?(?P<session>(?:race|quali|sprint|practice|any))?\s?(?P<tz>.*)",
+    @regex_command("next\s?(?P<session>(?:race|quali|sprint\-quali|sprint|practice|any))?\s?(?P<tz>.*)",
                    "Get the information about the next F1 event.",
-                   friendly_command="next [race|quali|sprint|practice|any] [timezone]")
+                   friendly_command="next [race|quali|sprint|sprint-quali|practice|any] [timezone]")
     async def next_event_command(self, message):
         tz = message.entities['tz']['value']
         if not tz:
@@ -98,9 +101,34 @@ class Formula1Events(Skill):
         session = message.entities['session']['value']
         if session is None:
             session = "race"
+        if session == "sprint":
+            session = "sprint-race"
+        session = session.replace("-", " ")
         if session == "any":
             session = None
         await message.respond(self.next_event_info(session=session, display_tz=tz))
+
+    @regex_command("weekend",
+                   "Print out the whole schedule for the weekend")
+    async def weekend(self, message):
+        # Get the name of the next event (and use this as the name for the "weekend")
+        next_event = self.get_next_event()
+
+        event_name = next_event.name
+        # Let's hope in future years they don't change the format of the events.
+        start_idx = event_name.find("FORMULA 1")
+        end_idx = event_name.find(" - ")
+        event_name = event_name[start_idx:end_idx]
+
+        weekend_events = []
+        for event in self.cal.events:
+            if event_name in event.name:
+                weekend_events.append(event)
+
+        # send both line breaks in html and plain because plain is ignored in html
+        await message.respond("\n</br>".join(
+            [self.format_event(e) for e in weekend_events]
+        ))
 
     @regex_command("settz\s?(?P<tz>.*)",
                    "Store a default timezone for your user.",
