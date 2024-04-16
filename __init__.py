@@ -87,17 +87,22 @@ class Formula1Events(Skill):
         return list(f1.cal.timeline.included(now,
                                              now+datetime.timedelta(minutes=timedelta)))
 
-    @regex_command("next\s?(?P<session>(?:race|quali|sprint\-quali|sprint|practice|any))?\s?(?P<tz>.*)",
-                   "Get the information about the next F1 event.",
-                   friendly_command="next [race|quali|sprint|sprint-quali|practice|any] [timezone]")
-    async def next_event_command(self, message):
+    async def get_timezone(self, message):
         tz = message.entities['tz']['value']
         if not tz:
             tz = await self.opsdroid.memory.get(message.user_id, None)
         try:
             tz = pytz.timezone(tz) if tz else pytz.UTC
         except pytz.UnknownTimeZoneError:
-            return await message.respond(f"Unable to parse timezone {tz}")
+            await message.respond(f"Unable to parse timezone {tz}")
+            return pytz.UTC
+        return tz
+
+    @regex_command("next\s?(?P<session>(?:race|quali|sprint\-quali|sprint|practice|any))?\s?(?P<tz>.*)",
+                   "Get the information about the next F1 event.",
+                   friendly_command="next [race|quali|sprint|sprint-quali|practice|any] [timezone]")
+    async def next_event_command(self, message):
+        tz = await self.get_timezone(message)
         session = message.entities['session']['value']
         if session is None:
             session = "race"
@@ -108,9 +113,10 @@ class Formula1Events(Skill):
             session = None
         await message.respond(self.next_event_info(session=session, display_tz=tz))
 
-    @regex_command("weekend",
+    @regex_command("weekend\s?(?P<tz>.*)",
                    "Print out the whole schedule for the weekend")
     async def weekend(self, message):
+        tz = await self.get_timezone(message)
         # Get the name of the next event (and use this as the name for the "weekend")
         next_event = self.get_next_event()
 
@@ -125,10 +131,12 @@ class Formula1Events(Skill):
             if event_name in event.name:
                 weekend_events.append(event)
 
+        event_names = [
+            self.format_event(e, display_tz=tz).replace(f"{event_name} - ", "") for e in weekend_events
+        ]
+
         # send both line breaks in html and plain because plain is ignored in html
-        await message.respond("\n</br>".join(
-            [self.format_event(e) for e in weekend_events]
-        ))
+        await message.respond(f"<h3>{event_name}</h3>" + "\n</br>".join(event_names))
 
     @regex_command("settz\s?(?P<tz>.*)",
                    "Store a default timezone for your user.",
